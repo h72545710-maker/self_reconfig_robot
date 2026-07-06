@@ -24,7 +24,7 @@
 
 ## 简历项目名称
 
-自重构机器人多模块协同控制与 ROS2 桥接系统
+基于嵌入式 Linux 的自重构机器人多模块协同控制与 ROS2 桥接系统
 
 ## 时间建议
 
@@ -36,11 +36,11 @@
 
 ## 技术栈
 
-C++17、Linux、CMake、UDP、UART、ROS2 Jazzy、Docker、树莓派、STM32、HTML/JavaScript
+C++17、Linux、CMake、UDP、UART、termios、systemd、ROS2 Jazzy、Docker、树莓派、STM32、HTML/JavaScript
 
 ## 简历描述版
 
-面向自重构机器人多模块协同任务场景，基于 C++17 实现上位机控制原型，将多个机器人单体抽象为独立模块，支持合体编队、分体并行探索、动态 leader 选举、故障恢复、低电量让渡、动态障碍重规划和协同感知覆盖；在树莓派 Ubuntu 环境中通过 Docker 部署 ROS2 Jazzy，将控制状态桥接为多个 ROS2 语义 topic，并构建 Web 可视化界面用于展示模块状态、路径规划、任务阶段和控制指标。
+面向自重构机器人多模块协同任务场景，基于 C++17 在树莓派 Linux 环境实现上位机控制原型，将多个机器人单体抽象为独立模块，支持合体编队、分体并行探索、动态 leader 选举、故障恢复、低电量让渡、动态障碍重规划和协同感知覆盖；基于 UDP、UART、systemd 和 ROS2 Jazzy 完成板端通信、服务化部署、健康监控和多 topic 状态发布，并构建 Web 可视化界面用于展示模块状态、路径规划、任务阶段和控制指标。
 
 ## 简历 Bullet 版本
 
@@ -49,6 +49,8 @@ C++17、Linux、CMake、UDP、UART、ROS2 Jazzy、Docker、树莓派、STM32、H
 - 实现 A* 路径规划与 line-of-sight 航点平滑优化，支持动态障碍注入后的在线重规划，并将其他模块位置、故障模块位置纳入动态避障约束。
 - 设计多模块协同感知与状态估计模块，模拟融合里程计、视觉定位、IMU 航向和前向距离信息，输出定位置信度、最大估计误差、感知覆盖率等运行指标。
 - 搭建 UDP 通信与 ACK 可靠控制链路，支持模块注册、心跳检测、任务下发、状态回传和故障上报；预留 `stm32_bridge`，支持通过 UART 接收 STM32 下位机回传的 `ODOM/BAT/FAULT` 数据。
+- 基于 Linux `termios` 实现 UART 桥接层，并使用 pty 虚拟串口模拟 STM32 下位机，实现无硬件条件下的 `ODOM/BAT/FAULT` 回传、速度命令响应和故障上报联调。
+- 使用 systemd 将控制仿真服务化部署到树莓派，支持开机自启、异常退出自动重启、journalctl 日志查看，并通过 timer 定期执行进程和状态文件健康检查。
 - 在树莓派 Ubuntu 25.10 上通过 Docker 部署 ROS2 Jazzy 环境，开发 ROS2 bridge 节点，将控制状态发布为 `/self_reconfig/control_state`、`/self_reconfig/mission`、`/self_reconfig/modules`、`/self_reconfig/path`、`/self_reconfig/metrics`、`/self_reconfig/events` 等语义 topic。
 - 构建 Web 可视化界面，实时展示模块地图、leader/follower 状态、优化路径、队形目标、子任务进度、故障恢复、传感器覆盖和任务时间轴，便于演示和复盘控制过程。
 
@@ -59,12 +61,12 @@ C++17、Linux、CMake、UDP、UART、ROS2 Jazzy、Docker、树莓派、STM32、H
 - 基于 C++17 设计自重构机器人多模块协同控制框架，支持合体编队与分体并行两种工作模式，实现集合、探索、返航的多阶段任务调度。
 - 实现动态 leader 选举、低电量让渡和故障恢复机制，在模块故障场景下完成控制权切换、任务重分配和路径绕行。
 - 实现 A* 路径规划与 line-of-sight 航点平滑优化，支持动态障碍注入后的在线重规划，并统计路径压缩、重规划次数和轨迹长度等指标。
-- 在树莓派 Ubuntu + Docker 环境中部署 ROS2 Jazzy，开发 bridge 节点，将控制状态拆分发布为 mission、modules、path、metrics、events 等 ROS2 topic。
-- 设计 Web 可视化界面展示模块状态、任务阶段、路径规划、协同覆盖和故障恢复过程，并预留 STM32 下位机 UART 桥接接口。
+- 基于 Linux `termios` 实现 UART 桥接层，通过 pty 虚拟串口模拟 STM32 下位机，验证 `ODOM/BAT/FAULT` 状态回传和故障上报链路。
+- 使用 systemd 将控制程序服务化部署到树莓派，支持开机自启、异常重启、journal 日志和 timer 健康检查；在 Docker 中部署 ROS2 Jazzy 并拆分发布多个语义 topic。
 
 ## 面试时一句话介绍
 
-我做的是一个面向自重构机器人的多模块协同控制原型，不是单车路径规划，而是把多个机器人模块组织成可合体、可分体的系统；上位机负责任务调度、leader 选举、路径规划、故障恢复和 ROS2 状态发布，下位机接口预留给 STM32 执行电机控制和传感器采集。
+我做的是一个基于嵌入式 Linux 的自重构机器人多模块协同控制原型，不是单车路径规划，而是把多个机器人模块组织成可合体、可分体的系统；树莓派上位机负责任务调度、leader 选举、路径规划、故障恢复、systemd 服务化和 ROS2 状态发布，下位机接口预留给 STM32 执行电机控制和传感器采集。
 
 ## 面试时 1 分钟讲法
 

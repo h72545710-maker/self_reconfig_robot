@@ -1,0 +1,17 @@
+[Unit]
+Description=Self reconfig robot control simulator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=yu
+WorkingDirectory=/home/yu/self_reconfig_robot
+ExecStart=/home/yu/self_reconfig_robot/build/robot_sim --ticks 100000 --sleep-ms 200 --state-file /home/yu/self_reconfig_robot/build/control_state.json
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

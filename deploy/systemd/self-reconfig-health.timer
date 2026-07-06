@@ -1,0 +1,10 @@
+[Unit]
+Description=Run self reconfig robot health check periodically
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=10
+Unit=self-reconfig-health.service
+
+[Install]
+WantedBy=timers.target

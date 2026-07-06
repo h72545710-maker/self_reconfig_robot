@@ -13,13 +13,14 @@ $ErrorActionPreference = "Stop"
 Write-Host "Target: $Target"
 Write-Host "Remote directory: $RemoteDir"
 
-ssh $Target "mkdir -p $RemoteDir/include/robot $RemoteDir/src $RemoteDir/docs $RemoteDir/scripts"
+ssh $Target "mkdir -p $RemoteDir/include/robot $RemoteDir/src $RemoteDir/docs $RemoteDir/scripts $RemoteDir/deploy/systemd"
 
 scp CMakeLists.txt README.md $Target`:$RemoteDir/
 scp include/robot/*.h $Target`:$RemoteDir/include/robot/
 scp src/*.cpp $Target`:$RemoteDir/src/
 scp docs/* $Target`:$RemoteDir/docs/
 scp scripts/*.sh $Target`:$RemoteDir/scripts/
+scp deploy/systemd/* $Target`:$RemoteDir/deploy/systemd/
 
 ssh $Target "cd $RemoteDir && chmod +x scripts/*.sh && bash scripts/build_native.sh"
 

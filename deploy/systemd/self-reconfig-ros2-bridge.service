@@ -1,0 +1,17 @@
+[Unit]
+Description=Self reconfig robot ROS2 bridge in Docker
+After=docker.service self-reconfig-robot-sim.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=yu
+WorkingDirectory=/home/yu/self_reconfig_robot
+ExecStart=/usr/bin/docker run --rm --network host --ipc host -v /home/yu/self_reconfig_robot:/workspace/self_reconfig_robot -w /workspace/self_reconfig_robot ros:jazzy-ros-base bash -lc "source /opt/ros/jazzy/setup.bash && source /workspace/self_reconfig_robot/ros2/install/setup.bash && ros2 launch self_reconfig_control control_bridge.launch.py state_file:=/workspace/self_reconfig_robot/build/control_state.json"
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

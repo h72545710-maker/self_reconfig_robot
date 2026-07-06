@@ -39,6 +39,10 @@ if (UNIX)
     )
 
     target_include_directories(stm32_bridge PRIVATE include)
+
+    add_executable(mock_stm32
+        src/mock_stm32.cpp
+    )
 endif()
 
 if (WIN32)
@@ -56,5 +60,6 @@ else()
     target_compile_options(module_node PRIVATE -Wall -Wextra -Wpedantic)
     if (UNIX)
         target_compile_options(stm32_bridge PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(mock_stm32 PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()

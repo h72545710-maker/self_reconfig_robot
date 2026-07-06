@@ -1,0 +1,11 @@
+[Unit]
+Description=Self reconfig robot health check
+
+[Service]
+Type=oneshot
+User=yu
+WorkingDirectory=/home/yu/self_reconfig_robot
+Environment=PROJECT_DIR=/home/yu/self_reconfig_robot
+ExecStart=/home/yu/self_reconfig_robot/scripts/health_monitor.sh
+StandardOutput=journal
+StandardError=journal

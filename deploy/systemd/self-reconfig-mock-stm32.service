@@ -1,0 +1,17 @@
+[Unit]
+Description=Mock STM32 serial device for self reconfig robot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=yu
+WorkingDirectory=/home/yu/self_reconfig_robot
+ExecStart=/home/yu/self_reconfig_robot/build/mock_stm32 --link /tmp/self_reconfig_stm32 --battery 92
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

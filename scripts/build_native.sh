@@ -33,4 +33,8 @@ CXXFLAGS=(-std=c++17 -Wall -Wextra -Wpedantic -O2 -Iinclude)
   src/udp_socket.cpp \
   -o build/stm32_bridge
 
+"$CXX" "${CXXFLAGS[@]}" \
+  src/mock_stm32.cpp \
+  -o build/mock_stm32
+
 echo "native build complete"

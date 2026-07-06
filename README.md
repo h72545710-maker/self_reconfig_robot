@@ -1,8 +1,8 @@
 # Self Reconfig Robot Control Prototype
 
-面向自重构机器人的多模块协同控制与 ROS2 桥接原型系统。
+面向自重构机器人的嵌入式 Linux 多模块协同控制与 ROS2 桥接原型系统。
 
-本项目将多个机器人单体抽象为可独立运行的模块，重点验证上位机控制层能力：合体编队、分体并行探索、动态 leader 选举、故障恢复、低电量让渡、动态障碍重规划、协同感知覆盖，以及从 C++ 控制状态到 ROS2 topic 的桥接发布。
+本项目将多个机器人单体抽象为可独立运行的模块，重点验证嵌入式 Linux 上位机控制层能力：合体编队、分体并行探索、动态 leader 选举、故障恢复、低电量让渡、动态障碍重规划、协同感知覆盖、Linux 串口桥接、systemd 服务化部署，以及从 C++ 控制状态到 ROS2 topic 的桥接发布。
 
 ## 项目定位
 
@@ -15,6 +15,8 @@
 - 树莓派部署和 ROS2 Jazzy bridge
 - Web 可视化演示与复盘
 - STM32 下位机 UART 接口预留
+- Linux systemd 服务化和健康监控
+- pty 虚拟串口联调
 
 ## 已实现功能
 
@@ -28,6 +30,8 @@
 - 协同感知：模拟融合里程计、视觉定位、IMU 航向和前向距离，统计覆盖率和融合置信度。
 - UDP 多进程通信：模块注册、心跳、ACK、任务下发、状态回传、故障上报。
 - STM32 bridge：预留 UART 下位机接口，支持 `ODOM/BAT/FAULT` 回传。
+- Mock STM32：基于 Linux pty 创建 `/tmp/self_reconfig_stm32` 虚拟串口，便于无硬件联调。
+- systemd 部署：支持控制程序开机自启、异常重启、journal 日志和 timer 健康检查。
 - ROS2 bridge：将控制状态发布为多个语义 topic。
 - Web UI：展示地图、模块状态、任务阶段、路径、队形、事件日志和指标。
 
@@ -38,6 +42,7 @@ self_reconfig_robot/
   include/robot/          C++ headers
   src/                    C++ simulator, UDP nodes, STM32 bridge
   scripts/                build, deploy, ROS2 Docker scripts
+  deploy/systemd/         board-side systemd service/timer units
   web/                    browser visualization
   ros2/                   ROS2 bridge package
   docs/                   design notes, interview/resume material
@@ -128,16 +133,42 @@ powershell -ExecutionPolicy Bypass -File .\scripts\deploy_ros2_scripts_pi.ps1
 yu@192.168.1.119:~/self_reconfig_robot
 ```
 
+## 嵌入式 Linux 板端能力
+
+串口模拟联调：
+
+```bash
+bash scripts/run_linux_serial_demo.sh
+```
+
+这个 demo 会启动 `mock_stm32`、`master_node` 和 `stm32_bridge`，通过 `/tmp/self_reconfig_stm32` 模拟真实 STM32 串口回传。
+
+安装 systemd 服务：
+
+```bash
+bash scripts/install_systemd_services.sh
+sudo systemctl start self-reconfig-robot-sim.service
+sudo systemctl start self-reconfig-health.timer
+journalctl -u self-reconfig-robot-sim.service -f
+```
+
+健康检查：
+
+```bash
+bash scripts/health_monitor.sh
+```
+
 ## 面试表达
 
 一句话版本：
 
-> 基于 C++17 实现面向自重构机器人的多模块协同控制原型，并在树莓派 Docker 环境中通过 ROS2 Jazzy 将控制状态桥接为多个语义 topic，验证任务调度、路径规划、故障恢复和协同感知过程。
+> 基于 C++17 在树莓派 Linux 环境实现自重构机器人多模块协同控制原型，完成 UDP 通信、UART 桥接、systemd 服务化、健康监控和 ROS2 Jazzy 多 topic 状态发布，验证任务调度、路径规划、故障恢复和协同感知过程。
 
 更多简历和面试材料见：
 
 - `docs/resume_insert_self_reconfig_robot.md`
 - `docs/resume_project_order_suggestion.md`
 - `docs/ros2_lower_fusion_upgrade.md`
+- `docs/embedded_linux_upgrade_plan.md`
+- `docs/embedded_linux_interview_guide.md`
 - `docs/control_design.md`
-
