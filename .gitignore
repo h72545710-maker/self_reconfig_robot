@@ -1,0 +1,35 @@
+# Build outputs
+build/
+cmake-build-*/
+out/
+
+# Runtime logs and generated state
+run_logs/
+*.log
+*.err
+state.json
+control_state.json
+
+# ROS2 workspace generated files
+ros2/build/
+ros2/install/
+ros2/log/
+
+# Editor and OS files
+.vscode/
+.idea/
+.vs/
+*.user
+*.suo
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Python caches used by small local servers/tools
+__pycache__/
+*.pyc
+
+# Local secrets
+.env
+*.key
+*.pem

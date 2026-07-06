@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自重构机器人协同控制可视化</title>
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #667085;
+      --line: #d6deea;
+      --grid: #eef3f8;
+      --leader: #2563eb;
+      --follower: #0f9f6e;
+      --fault: #d92d20;
+      --offline: #8a94a6;
+      --obstacle: #303846;
+      --path: #a9cdfa;
+      --waypoint: #5c8edb;
+      --trail: #c8d5e8;
+      --coverage: #dff6e8;
+      --target: #f59f00;
+      --formation: #9b59b6;
+      --subtask: #ef7b45;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 650;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(560px, 1.35fr) minmax(360px, 0.65fr);
+      gap: 16px;
+      padding: 16px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 4px;
+      max-width: 860px;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      min-width: 26px;
+      border: 1px solid #d7e0eb;
+      border-radius: 4px;
+      background: #fbfdff;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .cell.covered {
+      background: var(--coverage);
+    }
+
+    .cell.obstacle {
+      background: var(--obstacle);
+      border-color: var(--obstacle);
+    }
+
+    .cell.path::after {
+      content: "";
+      width: 28%;
+      height: 28%;
+      border-radius: 50%;
+      background: var(--path);
+      position: absolute;
+    }
+
+    .cell.trail {
+      background: #edf3fb;
+    }
+
+    .cell.waypoint::after {
+      content: "";
+      width: 42%;
+      height: 42%;
+      border-radius: 50%;
+      background: var(--waypoint);
+      position: absolute;
+    }
+
+    .cell.target {
+      background: #fff4d6;
+      border-color: var(--target);
+      color: #9a6700;
+    }
+
+    .cell.formation {
+      border-color: var(--formation);
+      box-shadow: inset 0 0 0 2px rgba(155, 89, 182, 0.34);
+    }
+
+    .cell.subtask {
+      border-color: var(--subtask);
+      box-shadow: inset 0 0 0 2px rgba(239, 123, 69, 0.38);
+    }
+
+    .robot {
+      width: 76%;
+      height: 76%;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(17, 24, 39, 0.18);
+      position: relative;
+      z-index: 2;
+    }
+
+    .robot.leader {
+      background: var(--leader);
+    }
+
+    .robot.follower {
+      background: var(--follower);
+    }
+
+    .robot.fault {
+      background: var(--fault);
+    }
+
+    .robot.offline {
+      background: var(--offline);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid var(--line);
+    }
+
+    .swatch.leader { background: var(--leader); }
+    .swatch.follower { background: var(--follower); }
+    .swatch.fault { background: var(--fault); }
+    .swatch.obstacle { background: var(--obstacle); }
+    .swatch.path { background: var(--waypoint); }
+    .swatch.trail { background: var(--trail); }
+    .swatch.coverage { background: var(--coverage); }
+    .swatch.formation { border-color: var(--formation); box-shadow: inset 0 0 0 2px rgba(155, 89, 182, 0.34); }
+    .swatch.subtask { border-color: var(--subtask); box-shadow: inset 0 0 0 2px rgba(239, 123, 69, 0.38); }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .card strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .kv b {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric b {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .progress {
+      height: 10px;
+      border-radius: 999px;
+      background: #e8eef7;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #0f9f6e);
+      transition: width 0.2s ease;
+    }
+
+    .events {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 6px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .event {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      color: #344054;
+      background: #f8fafc;
+      border: 1px solid #e4eaf2;
+      border-radius: 6px;
+      padding: 7px 8px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      align-items: center;
+      gap: 8px;
+      color: #344054;
+      font-size: 12px;
+    }
+
+    .timeline-tick {
+      color: var(--muted);
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .timeline-label {
+      border: 1px solid var(--line);
+      border-left-width: 5px;
+      border-radius: 6px;
+      padding: 7px 8px;
+      background: #fff;
+      font-weight: 600;
+    }
+
+    .timeline-label.coupled { border-left-color: var(--leader); }
+    .timeline-label.split { border-left-color: var(--subtask); }
+    .timeline-label.recovery { border-left-color: var(--fault); }
+    .timeline-label.replan { border-left-color: var(--obstacle); }
+    .timeline-label.handoff { border-left-color: var(--target); }
+    .timeline-label.done { border-left-color: var(--follower); }
+
+    @media (max-width: 980px) {
+      header {
+        padding: 0 14px;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>自重构机器人协同控制可视化</h1>
+    <div id="connection" class="status">等待状态文件...</div>
+  </header>
+
+  <main>
+    <section>
+      <div class="section-title">
+        <h2>模块地图</h2>
+        <span id="leader" class="hint">leader: -</span>
+      </div>
+      <div id="grid" class="grid"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch leader"></span>Leader</span>
+        <span class="legend-item"><span class="swatch follower"></span>Follower</span>
+        <span class="legend-item"><span class="swatch fault"></span>故障模块</span>
+        <span class="legend-item"><span class="swatch obstacle"></span>障碍物</span>
+        <span class="legend-item"><span class="swatch coverage"></span>感知覆盖</span>
+        <span class="legend-item"><span class="swatch trail"></span>历史轨迹</span>
+        <span class="legend-item"><span class="swatch path"></span>优化航点</span>
+        <span class="legend-item"><span class="swatch formation"></span>队形目标</span>
+        <span class="legend-item"><span class="swatch subtask"></span>分体子任务</span>
+      </div>
+      <div id="modules" class="cards"></div>
+    </section>
+
+    <section>
+      <div class="section-title">
+        <h2>控制状态</h2>
+        <span id="sourceName" class="hint">source: -</span>
+      </div>
+      <div class="metrics">
+        <div class="metric"><span>原始路径</span><b id="rawPath">-</b></div>
+        <div class="metric"><span>优化航点</span><b id="waypoints">-</b></div>
+        <div class="metric"><span>减少航点</span><b id="saved">-</b></div>
+        <div class="metric"><span>重规划</span><b id="replans">-</b></div>
+        <div class="metric"><span>队形</span><b id="formationMode">-</b></div>
+        <div class="metric"><span>阶段</span><b id="missionStage">-</b></div>
+        <div class="metric"><span>工作模式</span><b id="workMode">-</b></div>
+        <div class="metric"><span>子任务</span><b id="subtaskProgress">-</b></div>
+        <div class="metric"><span>Leader切换</span><b id="leaderSwitches">-</b></div>
+        <div class="metric"><span>健康让渡</span><b id="healthHandoffs">-</b></div>
+        <div class="metric"><span>队形切换</span><b id="formationSwitches">-</b></div>
+        <div class="metric"><span>轨迹长度</span><b id="trailLength">-</b></div>
+        <div class="metric"><span>恢复Tick</span><b id="recoveryTicks">-</b></div>
+        <div class="metric"><span>覆盖率</span><b id="coveragePercent">-</b></div>
+        <div class="metric"><span>覆盖格</span><b id="coveredCells">-</b></div>
+        <div class="metric"><span>规划算法</span><b id="plannerName">-</b></div>
+        <div class="metric"><span>融合置信</span><b id="fusionConfidence">-</b></div>
+        <div class="metric"><span>定位误差</span><b id="fusionError">-</b></div>
+        <div class="metric"><span>前向障碍</span><b id="frontBlocked">-</b></div>
+      </div>
+      <div class="card">
+        <strong id="taskName">Task -</strong>
+        <div class="kv">
+          <span>状态</span><b id="taskState">-</b>
+          <span>目标</span><b id="taskTarget">-</b>
+          <span>进度</span><b id="taskProgress">0%</b>
+          <span>Tick</span><b id="tickValue">-</b>
+        </div>
+        <div class="progress"><div id="progressBar" class="bar"></div></div>
+      </div>
+
+      <div class="section-title" style="margin-top: 18px;">
+        <h2>模式时间轴</h2>
+        <span class="hint">合体 / 分体 / 恢复</span>
+      </div>
+      <div id="timeline" class="timeline"></div>
+
+      <div class="section-title" style="margin-top: 18px;">
+        <h2>事件日志</h2>
+        <span class="hint">最新事件在上方</span>
+      </div>
+      <div id="events" class="events"></div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get("source") || "state.json";
+    const stateUrl = `/build/${source}`;
+
+    const gridEl = document.getElementById("grid");
+    const modulesEl = document.getElementById("modules");
+    const eventsEl = document.getElementById("events");
+    const timelineEl = document.getElementById("timeline");
+    const connectionEl = document.getElementById("connection");
+    const leaderEl = document.getElementById("leader");
+    const sourceNameEl = document.getElementById("sourceName");
+    const rawPathEl = document.getElementById("rawPath");
+    const waypointsEl = document.getElementById("waypoints");
+    const savedEl = document.getElementById("saved");
+    const replansEl = document.getElementById("replans");
+    const formationModeEl = document.getElementById("formationMode");
+    const missionStageEl = document.getElementById("missionStage");
+    const workModeEl = document.getElementById("workMode");
+    const subtaskProgressEl = document.getElementById("subtaskProgress");
+    const leaderSwitchesEl = document.getElementById("leaderSwitches");
+    const healthHandoffsEl = document.getElementById("healthHandoffs");
+    const formationSwitchesEl = document.getElementById("formationSwitches");
+    const trailLengthEl = document.getElementById("trailLength");
+    const recoveryTicksEl = document.getElementById("recoveryTicks");
+    const coveragePercentEl = document.getElementById("coveragePercent");
+    const coveredCellsEl = document.getElementById("coveredCells");
+    const plannerNameEl = document.getElementById("plannerName");
+    const fusionConfidenceEl = document.getElementById("fusionConfidence");
+    const fusionErrorEl = document.getElementById("fusionError");
+    const frontBlockedEl = document.getElementById("frontBlocked");
+    const taskNameEl = document.getElementById("taskName");
+    const taskStateEl = document.getElementById("taskState");
+    const taskTargetEl = document.getElementById("taskTarget");
+    const taskProgressEl = document.getElementById("taskProgress");
+    const tickValueEl = document.getElementById("tickValue");
+    const progressBarEl = document.getElementById("progressBar");
+
+    sourceNameEl.textContent = `source: ${source}`;
+
+    const defaultObstacles = [];
+    for (let y = 1; y < 8; y++) defaultObstacles.push({ x: 7, y });
+    for (let x = 10; x < 15; x++) defaultObstacles.push({ x, y: 5 });
+
+    function keyOf(point) {
+      return `${point.x},${point.y}`;
+    }
+
+    function robotClass(module) {
+      if (module.status === "fault") return "fault";
+      if (module.status === "offline") return "offline";
+      if (module.role === "leader") return "leader";
+      return "follower";
+    }
+
+    function renderGrid(state) {
+      const width = state.map?.width ?? 18;
+      const height = state.map?.height ?? 10;
+      const target = state.task?.target ?? state.map?.target ?? { x: 12, y: 4 };
+      const obstacleList = state.map?.obstacles?.length ? state.map.obstacles : defaultObstacles;
+      const obstacles = new Set(obstacleList.map(keyOf));
+      const covered = new Set((state.coveredCells ?? []).map(keyOf));
+      const trail = new Set((state.leaderTrail ?? []).map(keyOf));
+      const path = new Set((state.path ?? []).map(keyOf));
+      const waypoints = new Set((state.path ?? []).map(keyOf));
+      const formation = new Set((state.formationTargets ?? []).map((item) => `${item.x},${item.y}`));
+      const subtasks = new Set((state.subtasks ?? []).filter((item) => !item.done).map((item) => `${item.x},${item.y}`));
+      const modulesByPos = new Map();
+
+      for (const module of state.modules ?? []) {
+        modulesByPos.set(`${module.x},${module.y}`, module);
+      }
+
+      gridEl.innerHTML = "";
+      gridEl.style.gridTemplateColumns = `repeat(${width}, minmax(24px, 1fr))`;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const cell = document.createElement("div");
+          const key = `${x},${y}`;
+          cell.className = "cell";
+          if (covered.has(key)) cell.classList.add("covered");
+          if (obstacles.has(key)) cell.classList.add("obstacle");
+          if (trail.has(key)) cell.classList.add("trail");
+          if (path.has(key)) cell.classList.add("path");
+          if (waypoints.has(key)) cell.classList.add("waypoint");
+          if (formation.has(key)) cell.classList.add("formation");
+          if (subtasks.has(key)) cell.classList.add("subtask");
+          if (target.x === x && target.y === y) {
+            cell.classList.add("target");
+            cell.textContent = "T";
+          }
+
+          const module = modulesByPos.get(key);
+          if (module) {
+            cell.textContent = "";
+            const marker = document.createElement("div");
+            marker.className = `robot ${robotClass(module)}`;
+            marker.textContent = module.role === "leader" ? "L" : module.id;
+            cell.appendChild(marker);
+          }
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    function renderModules(state) {
+      modulesEl.innerHTML = "";
+      for (const module of state.modules ?? []) {
+        const target = (state.formationTargets ?? []).find((item) => item.moduleId === module.id);
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <strong>Module ${module.id}</strong>
+          <div class="kv">
+            <span>角色</span><b>${module.role}</b>
+            <span>状态</span><b>${module.status}</b>
+            <span>位置</span><b>(${module.x}, ${module.y})</b>
+            <span>电量</span><b>${module.battery}</b>
+            <span>队形目标</span><b>${target ? `(${target.x}, ${target.y})` : "-"}</b>
+          </div>
+        `;
+        modulesEl.appendChild(card);
+      }
+    }
+
+    function renderTask(state) {
+      const task = state.task ?? {};
+      const metrics = state.metrics ?? {};
+      const mission = state.mission ?? {};
+      leaderEl.textContent = `leader: ${state.leader ?? "-"}`;
+      rawPathEl.textContent = metrics.rawPath ?? "-";
+      waypointsEl.textContent = metrics.optimizedWaypoints ?? "-";
+      savedEl.textContent = metrics.savedWaypoints ?? "-";
+      replansEl.textContent = metrics.replanCount ?? "-";
+      formationModeEl.textContent = metrics.formationMode ?? "-";
+      missionStageEl.textContent = mission.totalGoals ? `${mission.completedGoals ?? 0}/${mission.totalGoals}` : "-";
+      workModeEl.textContent = mission.workMode ?? "-";
+      subtaskProgressEl.textContent = mission.totalSubtasks ? `${mission.completedSubtasks ?? 0}/${mission.totalSubtasks}` : "-";
+      leaderSwitchesEl.textContent = metrics.leaderSwitches ?? "-";
+      healthHandoffsEl.textContent = metrics.healthHandoffs ?? "-";
+      formationSwitchesEl.textContent = metrics.formationSwitches ?? "-";
+      trailLengthEl.textContent = metrics.trailLength ?? "-";
+      recoveryTicksEl.textContent = metrics.faultRecoveryTicks ?? "-";
+      coveragePercentEl.textContent = metrics.coveragePercent === undefined ? "-" : `${metrics.coveragePercent}%`;
+      coveredCellsEl.textContent = metrics.coveredCells ?? "-";
+      plannerNameEl.textContent = metrics.planner ? "A*+Smooth" : "-";
+      fusionConfidenceEl.textContent = metrics.fusionConfidence === undefined ? "-" : `${metrics.fusionConfidence}%`;
+      fusionErrorEl.textContent = metrics.fusionMaxErrorCm === undefined ? "-" : `${metrics.fusionMaxErrorCm}cm`;
+      frontBlockedEl.textContent = metrics.frontBlockedCount ?? "-";
+      taskNameEl.textContent = `Task ${task.id ?? "-"} / ${task.type ?? "-"}`;
+      taskStateEl.textContent = task.state ?? "-";
+      taskTargetEl.textContent = task.target ? `(${task.target.x}, ${task.target.y})` : "-";
+      tickValueEl.textContent = state.tick ?? "-";
+      const progress = task.progress ?? 0;
+      taskProgressEl.textContent = `${progress}%`;
+      progressBarEl.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+    }
+
+    function formatEvent(event) {
+      if (event.includes("A* path planning enabled")) return "启用 A* 路径规划";
+      if (event.includes("waypoint optimization enabled")) return "启用路径航点优化";
+      if (event.includes("formation target tracking enabled")) return "启用队形目标跟踪";
+      if (event.includes("3-stage mission")) return "三阶段任务：集结 -> 探索 -> 返航";
+      if (event.includes("module 1 reports motor fault")) return "1号模块故障，触发 leader 重选";
+      if (event.includes("leader switched")) return event.replace("[recovery] leader switched", "故障恢复：leader 切换");
+      if (event.includes("fault recovery completed")) return event.replace("[recovery] fault recovery completed in", "故障恢复完成，用时").replace("tick(s)", "tick");
+      if (event.includes("active leader battery low")) return "当前 leader 电量过低，触发健康让渡";
+      if (event.includes("coverage reached")) return event.replace("[mapping] coverage reached", "协同感知覆盖率达到");
+      if (event.includes("new blocked cells")) return "检测到新增动态障碍，触发绕行重规划";
+      if (event.includes("reached local target")) return event.replace("[split-task] module", "分体任务：模块").replace("reached local target", "到达局部目标");
+      if (event.includes("all local exploration subtasks complete")) return "分体探索：全部局部子任务完成";
+      if (event.includes("mode switch")) return event.replace("[formation] mode switch", "队形切换");
+      if (event.includes("goal 1 RENDEZVOUS reached")) return "阶段1完成：模块集结";
+      if (event.includes("switch to goal 2 EXPLORE")) return "切换到阶段2：区域探索";
+      if (event.includes("goal 2 EXPLORE reached")) return "阶段2完成：区域探索";
+      if (event.includes("switch to goal 3 RETURN")) return "切换到阶段3：返航";
+      if (event.includes("goal 3 RETURN reached")) return "阶段3完成：返航";
+      if (event.includes("[mission] complete")) return "任务完成";
+      return event;
+    }
+
+    function formatTimelineLabel(item) {
+      const label = item.label ?? "";
+      if (label === "rendezvous") return "coupled：合体集结";
+      if (label === "parallel explore") return "split：分体并行探索";
+      if (label === "return") return "coupled：重新合体返航";
+      if (label === "module fault") return "故障恢复：模块失效";
+      if (label === "dynamic obstacle") return "动态障碍：触发重规划";
+      if (label === "low battery") return "健康让渡：低电量切换";
+      if (label === "mission complete") return "任务完成";
+      return label || item.mode || "-";
+    }
+
+    function renderTimeline(state) {
+      timelineEl.innerHTML = "";
+      for (const item of state.timeline ?? []) {
+        const row = document.createElement("div");
+        row.className = "timeline-item";
+        const tick = document.createElement("div");
+        tick.className = "timeline-tick";
+        tick.textContent = `T${item.tick}`;
+        const label = document.createElement("div");
+        label.className = `timeline-label ${item.mode ?? ""}`;
+        label.textContent = formatTimelineLabel(item);
+        row.appendChild(tick);
+        row.appendChild(label);
+        timelineEl.appendChild(row);
+      }
+    }
+
+    function renderEvents(state) {
+      eventsEl.innerHTML = "";
+      for (const event of state.events ?? []) {
+        const item = document.createElement("div");
+        item.className = "event";
+        item.textContent = formatEvent(event);
+        eventsEl.appendChild(item);
+      }
+    }
+
+    async function tick() {
+      try {
+        const response = await fetch(`${stateUrl}?t=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const state = await response.json();
+        renderGrid(state);
+        renderModules(state);
+        renderTask(state);
+        renderTimeline(state);
+        renderEvents(state);
+        connectionEl.textContent = `${source} 已更新 ${new Date().toLocaleTimeString()}`;
+      } catch (error) {
+        connectionEl.textContent = `等待 ${source} 写入`;
+      }
+    }
+
+    tick();
+    setInterval(tick, 350);
+  </script>
+</body>
+</html>
