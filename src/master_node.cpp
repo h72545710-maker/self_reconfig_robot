@@ -1,6 +1,7 @@
 #include "robot/protocol.h"
 #include "robot/types.h"
 #include "robot/udp_socket.h"
+#include "robot/json_utils.h"
 
 #include <algorithm>
 #include <chrono>
@@ -71,29 +72,6 @@ Config parse_args(int argc, char** argv) {
         }
     }
     return config;
-}
-
-std::string json_escape(const std::string& value) {
-    std::string out;
-    for (char ch : value) {
-        switch (ch) {
-        case '\\':
-            out += "\\\\";
-            break;
-        case '"':
-            out += "\\\"";
-            break;
-        case '\n':
-            out += "\\n";
-            break;
-        case '\r':
-            break;
-        default:
-            out += ch;
-            break;
-        }
-    }
-    return out;
 }
 
 void record_event(std::vector<std::string>& events, const std::string& message) {
@@ -473,7 +451,7 @@ void write_state_json(const std::string& path,
     out << "  ],\n";
     out << "  \"events\": [\n";
     for (std::size_t i = 0; i < events.size(); ++i) {
-        out << "    \"" << json_escape(events[i]) << "\"";
+        out << "    \"" << robot::json_escape(events[i]) << "\"";
         if (i + 1 < events.size()) {
             out << ",";
         }

@@ -59,6 +59,12 @@ cmake --build build --config Release
 .\build\Release\robot_sim.exe --ticks 60 --sleep-ms 120 --state-file build\control_state.json
 ```
 
+运行核心测试：
+
+```powershell
+ctest --test-dir build -C Release --output-on-failure
+```
+
 Linux / Raspberry Pi:
 
 ```bash
@@ -166,6 +172,8 @@ bash scripts/health_monitor.sh
 
 更多简历和面试材料见：
 
+- `docs/architecture.md`
+- `docs/verification_checklist.md`
 - `docs/resume_insert_self_reconfig_robot.md`
 - `docs/resume_project_order_suggestion.md`
 - `docs/ros2_lower_fusion_upgrade.md`
